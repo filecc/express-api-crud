@@ -41,6 +41,9 @@ async function show(req, res, next) {
     where: {
       slug: req.params.slug
     }
+  }).catch((error) => {
+    next(new CustomError(404, error.message))
+    return
   })
   
   if (!post) {
@@ -73,9 +76,10 @@ async function store (req, res, next) {
     data.title, 
     slug,
     data.content,
-    published = data.published ? true : false,
+    published = data.published,
     imageSlug ?? '/placeholder.webp',
     )
+
     try {
       prisma.post.create({
         data: {
@@ -89,8 +93,12 @@ async function store (req, res, next) {
       .then((post) => {
         res.json(post)
       })
+      .catch((error) => {
+        next(new CustomError(404, error.message))
+        return
+      })
     } catch (error) {
-      throw new CustomError(400, error.message)
+      next(new CustomError(400, error.message))
     }
 
     
@@ -101,8 +109,20 @@ async function store (req, res, next) {
   
 }
 
-function destroy(req, res) {
-  const id = req.body.id
+async function destroy(req, res, next) {
+  const slug = req.body.slug
+  await prisma.post.delete({
+    where: {
+      slug: slug
+    }
+  })
+  .then((post) => {
+    res.json(post)
+  })
+  .catch((error) => {
+    next(new CustomError(404, error.message))
+    return
+  })
   const postIndex = posts.findIndex((post) => post.id == id)
   if(!postIndex){
     res.status(404).json({error: 404, message: `Post with id ${id} not found`})

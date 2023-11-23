@@ -9,7 +9,7 @@ const doubleMiddleware = [authMiddleware, multer({dest: "public/images"}).single
 
 
 router.get("/posts", apiController.index)
-router.post("/post/add", doubleMiddleware, apiController.store)
+router.post("/post", doubleMiddleware, apiController.store)
 router.post("/delete/:slug", doubleMiddleware, apiController.destroy)
 router.get("/post/:slug", apiController.show)
 router.post("/edit", doubleMiddleware, apiController.edit)
