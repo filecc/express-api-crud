@@ -11,7 +11,7 @@ datasource db {
 }
 
 model Post {
-  id       BigInt     @id @default(autoincrement())
+  id       String     @id @default(uuid())
   title    String @db.VarChar(255)
   content  String @db.Text
   slug     String @db.VarChar(255) @unique

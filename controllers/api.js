@@ -6,6 +6,9 @@ const Post = require("../lib/Post");
 const generateJWT = require("../lib/generateJWT");
 const {PrismaClient} = require("@prisma/client");
 const prisma = new PrismaClient()
+const CustomError= require("../lib/CustomError");
+const slugGenerator = require("../lib/slugGenerator");
+
 
 
 const port = process.env.PORT ?? "";
@@ -22,7 +25,7 @@ const posts = prisma.post.findMany()
 
 async function index(req, res) {
   const posts = await prisma.post.findMany()
-  console.log(posts)
+  
   if (posts.lenght === 0) {
     res.json({
       error: 404,
@@ -33,9 +36,13 @@ async function index(req, res) {
   res.json(posts);
 }
 
-function show(req, res) {
-  const post = posts.find((post) => post.id == req.params.id);
-
+async function show(req, res) {
+  const post = await prisma.post.findUnique({
+    where: {
+      slug: req.params.slug
+    }
+  })
+  
   if (!post) {
     res.json({
       error: 404,
@@ -53,34 +60,50 @@ function show(req, res) {
 
 }
 
-function store (req, res) {
-
-  const lastId = posts.map((post) => post.id).sort().reverse()[0]
-
+async function store (req, res) {
   const data = req.body
-  const tags = data.tags.split(",").map((tag) => tag.trim())
-
+  if(!data.title || !data.content || !data.published){
+    res.json({
+      error: 'Missing required parameters',
+      code: 407
+    })
+    return
+  }
+ 
+  
   let imageSlug;
 
-  if(req.file){
-    imageSlug = '/'+ req.file.filename + '.jpg'
-    fs.renameSync(req.file.path, path.resolve(`./public/images${imageSlug}`))
-  }
-
+  const slug = await slugGenerator(data.title)
 
   const newPost = new Post(
-    lastId + 1, 
     data.title, 
+    slug,
     data.content,
-    tags,
+    published = data.published ? true : false,
     imageSlug ?? '/placeholder.webp',
     )
+    try {
+      prisma.post.create({
+        data: {
+          title: newPost.title,
+          content: newPost.content,
+          published: newPost.published,
+          image: newPost.image,
+          slug: newPost.slug
+        }
+      })
+      .then((post) => {
+        res.json(post)
+      })
+    } catch (error) {
+      throw new CustomError(400, error.message)
+    }
 
-    posts.push(newPost)
+    
 
-    fs.writeFileSync(path.resolve("./db/posts.json"), JSON.stringify(posts, null, 2))
+  
 
-    res.status(300).redirect(`/posts/${newPost.id}`)
+    
   
 }
 

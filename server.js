@@ -12,6 +12,7 @@ const apiRouter = require('./routers/api')
 const notfound = require('./middleware/notfound')
 const errorMiddleware = require('./middleware/errors')
 
+
 app.get('/favicon.ico', (req, res) => res.status(204))
 
 app.use(express.static('public'))

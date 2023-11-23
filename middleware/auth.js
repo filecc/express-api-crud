@@ -3,11 +3,10 @@ const CustomError = require('../lib/CustomError')
 
 function isUserAuthenticated(req, res, next){
     // get cookie from request
-    const token = req.cookies.session
-    const user = req.cookies.user
-    if(!token || !user){
-        res.status(401).redirect('/login')
-        return
+    const token = req.headers["authorization"];
+
+    if(!token){
+        throw new CustomError('API KEY not present.', 401)
     }
 
     jwt.verify(token, process.env.JWT_SECRET, (err, decodedToken) => {
