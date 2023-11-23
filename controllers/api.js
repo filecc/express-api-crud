@@ -22,6 +22,46 @@ const host = process.env.HOST.includes("localhost")
  */
 
 async function index(req, res, next) {
+  const query = req.query
+  
+  if(query){
+    const { maxResult, startIndex } = query
+    if(maxResult < 1 || startIndex < 0 || !startIndex){
+      next(new CustomError(400, "startIndex and maxResults are required"))
+      return
+    }
+
+    await prisma.post.findMany()
+    .then((posts) => {
+      const parsedStart = parseInt(startIndex)
+      const parsedMax = parseInt(maxResult)
+      const totalResults = posts.length
+      
+      const possibleLimit = (parsedStart + parsedMax) <= totalResults ? (parsedStart + parsedMax) : totalResults
+      
+
+      const newIndex = (possibleLimit + parsedMax) <= (totalResults) 
+      ? (parsedStart + parsedMax) 
+      : (parsedStart + 1 < totalResults ? totalResults - 1 : null)
+      
+
+      const nextPage = newIndex 
+      ? `http://${host}:${port}/api/posts?maxResult=${parsedMax}&startIndex=${newIndex}` 
+      : null
+      
+      res.json({
+        totalResults: posts.length,
+        nextPage: nextPage,
+        posts: posts.slice(startIndex, possibleLimit)
+      })
+      return
+    })
+    .catch((error) => {
+      next(new CustomError(404, error.message))
+      return
+    })
+  }
+
   await prisma.post.findMany()
   .then((posts) => {
     if (posts.lenght === 0) {
@@ -29,6 +69,7 @@ async function index(req, res, next) {
       return
     }
     res.json(posts);
+    return
   })
   .catch((error) => {
     next(new CustomError(404, error.message))
