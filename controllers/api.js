@@ -123,21 +123,6 @@ async function destroy(req, res, next) {
     next(new CustomError(404, error.message))
     return
   })
-  const postIndex = posts.findIndex((post) => post.id == id)
-  if(!postIndex){
-    res.status(404).json({error: 404, message: `Post with id ${id} not found`})
-    return
-  }
-  if(posts[postIndex].image !== '/placeholder.webp')
-  {
-    fs.unlinkSync(path.resolve(`./public/images/${posts[postIndex].image}`))
-  }
-  
-  posts.splice(postIndex, 1)
-  fs.writeFileSync(path.resolve("./db/posts.json"), JSON.stringify(posts, null, 2))
-  
-
-  res.status(200).redirect('/admin')
 }
 
 function edit(req, res){
