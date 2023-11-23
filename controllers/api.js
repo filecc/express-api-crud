@@ -76,7 +76,7 @@ async function store (req, res, next) {
     data.title, 
     slug,
     data.content,
-    published = data.published,
+    published = data.published === "true" ? true : false,
     imageSlug ?? '/placeholder.webp',
     )
 
@@ -125,35 +125,41 @@ async function destroy(req, res, next) {
   })
 }
 
-function edit(req, res){
+async function edit(req, res, next){
+  const slug = req.body.slug
+  const data = req.body
 
-  const id = req.body.id
-  const postIndex = posts.findIndex((post) => post.id.toString() == id)
-
-
-  if(postIndex === -1 | null | undefined){
-    res.status(404).json({error: 404, message: `Post with id ${id} not found`})
+  if(!slug){
+    next(new CustomError(400, "Missing slug"))
     return
   }
-  const data = req.body
-  const tags = data.tags.split(",").map((tag) => tag.trim())
 
-  let imageSlug;
-
-  if(req.file){
-    fs.unlinkSync(path.resolve(`./public/images/${posts[postIndex].image}`))
-    imageSlug = '/'+ req.file.filename + '.jpg'
-    fs.renameSync(req.file.path, path.resolve(`./public/images${imageSlug}`))
+  if(!data.title || !data.content || !data.published){
+    next(new CustomError(400, "Missing required fields: title, content, published."))
+    return
   }
 
-  posts[postIndex].title = data.title
-  posts[postIndex].body = data.content
-  posts[postIndex].tags = tags
-  posts[postIndex].image = imageSlug ?? posts[postIndex].image
+  const newSlug = await slugGenerator(data.title)
 
-  fs.writeFileSync(path.resolve("./db/posts.json"), JSON.stringify(posts, null, 2))
-
-  res.status(300).redirect(`/posts/${posts[postIndex].id}`)
+  await prisma.post.update({
+    where: {
+      slug: slug
+    },
+    data: {
+      title: data.title,
+      content: data.content,
+      published: data.published === "true" ? true : false,
+      slug: newSlug
+    }
+  
+  })
+  .then((post) => {
+    res.json(post)
+  })
+  .catch((error) => {
+    next(new CustomError(404, error.message))
+    return
+  })
 }
 
 module.exports = {
