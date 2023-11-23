@@ -16,47 +16,54 @@ const host = process.env.HOST.includes("localhost")
   ? "localhost"
   : "https://" + process.env.HOST + "/";
 
-const posts = prisma.post.findMany()
-
 /**
  * @param {express.Request} req
  * @param {express.Response} res
  */
 
-async function index(req, res) {
-  const posts = await prisma.post.findMany()
-  
-  if (posts.lenght === 0) {
-    res.json({
-      error: 404,
-      message: `No posts found`,
-    });
-    return
-  }
-  res.json(posts);
-}
-
-async function show(req, res, next) {
-  const post = await prisma.post.findUnique({
-    where: {
-      slug: req.params.slug
+async function index(req, res, next) {
+  await prisma.post.findMany()
+  .then((posts) => {
+    if (posts.lenght === 0) {
+      next(new CustomError(404, `No posts found`))
+      return
     }
-  }).catch((error) => {
+    res.json(posts);
+  })
+  .catch((error) => {
     next(new CustomError(404, error.message))
     return
   })
   
-  if (!post) {
-    next(new CustomError(404, `Post with slug ${req.params.slug} not found`))
+  
+  
+}
+
+async function show(req, res, next) {
+  await prisma.post.findUnique({
+    where: {
+      slug: req.params.slug
+    }
+  })
+  .then((post) => {
+    if (!post) {
+      next(new CustomError(404, `Post with slug ${req.params.slug} not found`))
+      return
+    }
+    const imgPath = `http://${host}:${port}/images${post.image}`;
+    const downloadLink = `http://localhost:3000/posts/${post.slug}/download`;
+    res.json({
+      ...post,
+      image_url: `${imgPath}`,
+      download_link: `${downloadLink}`,
+    });
+  })
+  .catch((error) => {
+    next(new CustomError(404, error.message))
     return
-  }
-  const imgPath = `http://${host}:${port}/images${post.image}`;
-  const downloadLink = `http://localhost:3000/posts/${post.slug}/download`;
-  res.json({
-    ...post,
-    image_url: `${imgPath}`,
-    download_link: `${downloadLink}`,
-  });
+  })
+  
+  
 
 }
 
@@ -100,13 +107,6 @@ async function store (req, res, next) {
     } catch (error) {
       next(new CustomError(400, error.message))
     }
-
-    
-
-  
-
-    
-  
 }
 
 async function destroy(req, res, next) {
