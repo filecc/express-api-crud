@@ -36,7 +36,7 @@ async function index(req, res) {
   res.json(posts);
 }
 
-async function show(req, res) {
+async function show(req, res, next) {
   const post = await prisma.post.findUnique({
     where: {
       slug: req.params.slug
@@ -44,10 +44,7 @@ async function show(req, res) {
   })
   
   if (!post) {
-    res.json({
-      error: 404,
-      message: `Post with id ${req.params.id} not found`,
-    });
+    next(new CustomError(404, `Post with slug ${req.params.slug} not found`))
     return
   }
   const imgPath = `http://${host}:${port}/images${post.image}`;
@@ -60,13 +57,10 @@ async function show(req, res) {
 
 }
 
-async function store (req, res) {
+async function store (req, res, next) {
   const data = req.body
   if(!data.title || !data.content || !data.published){
-    res.json({
-      error: 'Missing required parameters',
-      code: 407
-    })
+    next(new CustomError(400, "Missing required fields"))
     return
   }
  
